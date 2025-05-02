@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>FastAPI App</h1>
+        <nav>
+            <button id="logout-btn" class="btn">Logout</button>
+        </nav>
+    </header>
+    <main>
+        <div class="dashboard-header">
+            <h2>Welcome, <span id="user-email"></span>!</h2>
+        </div>
+        
+        <h3>User Management</h3>
+        <div id="message-container"></div>
+        
+        <div id="user-list-container" class="user-list">
+            <!-- Users will be loaded here -->
+        </div>
+    </main>
+    <script type="module">
+        import { authAPI, userAPI } from '/js/api.js';
+        
+        // Check authentication
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/auth/login';
+        }
+        
+        // Display current user email
+        authAPI.getCurrentUser(token)
+            .then(user => {
+                document.getElementById('user-email').textContent = user.email;
+            })
+            .catch(() => {
+                localStorage.removeItem('token');
+                window.location.href = '/auth/login';
+            });
+        
+        // Logout button
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('token');
+            window.location.href = '/';
+        });
+        
+        // Load users
+        async function loadUsers() {
+            try {
+                const users = await userAPI.getAllUsers(token);
+                const container = document.getElementById('user-list-container');
+                
+                if (users.length === 0) {
+                    container.innerHTML = '<p>No users found.</p>';
+                    return;
+                }
+                
+                container.innerHTML = users.map(user => `
+                    <div class="user-card" data-id="${user.id}">
+                        <h3>${user.email}</h3>
+                        <p>ID: ${user.id}</p>
+                        <div class="user-actions">
+                            <button class="action-btn edit-btn">Edit</button>
+                            <button class="action-btn delete-btn">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Add event listeners to buttons
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const userId = e.target.closest('.user-card').dataset.id;
+                        try {
+                            await userAPI.deleteUser(userId, token);
+                            showMessage('User deleted successfully', 'success');
+                            loadUsers();
+                        } catch (error) {
+                            showMessage(error.message, 'error');
+                        }
+                    });
+                });
+                
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const userId = e.target.closest('.user-card').dataset.id;
+                        // Implement edit functionality
+                        showMessage('Edit functionality would go here', 'info');
+                    });
+                });
+                
+            } catch (error) {
+                showMessage(error.message, 'error');
+                if (error.message.includes('Unauthorized')) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/auth/login';
+                }
+            }
+        }
+        
+        function showMessage(message, type) {
+            const container = document.getElementById('message-container');
+            container.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+        }
+        
+        // Initial load
+        loadUsers();
+    </script>
+</body>
+</html>
