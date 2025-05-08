@@ -10,7 +10,7 @@ app=FastAPI()
 
 @app.get("/")
 def main():
-    return {"message": "Hello World"}
+    return {"message": "Project is running"}
 
 app.include_router(auth_router)
 app.include_router(user_router)

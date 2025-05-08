@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from . import schema, service, repository
+from . import schema,service, repository
+from ....core import security
 from ....db.session import get_db
 from app.services.email_service import send_otp_email
 from fastapi.responses import JSONResponse
+from ....core import security
 
 router = APIRouter(
     tags=["User Registration"]
@@ -18,7 +20,7 @@ def register(data: schema.RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Weak password")
     if len(data.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
-    hashed = service.get_password_hash(data.password)
+    hashed = security.get_password_hash(data.password)
     user = repository.create_user(db, data.name, data.email, hashed)
     otp = service.generate_otp()
     repository.store_otp(db, data.email, otp)
@@ -39,12 +41,18 @@ def verify_email(data: schema.VerifyEmailRequest, db: Session = Depends(get_db))
 @router.post("/login", response_model=schema.TokenResponse)
 def login(data: schema.LoginRequest, db: Session = Depends(get_db)):
     user = repository.get_user_by_email(db, data.email)
-    if not user or not service.verify_password(data.password, user.hashed_password):
+    if not user or not security.verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     if not user.is_verified:
         raise HTTPException(status_code=403, detail="Email not verified")
-    token = service.create_jwt_token(user.id)
-    response = JSONResponse(content={"message": "Login successful"})
+    token = security.create_access_token({"user_id": str(user.id)})
+    
+    response = JSONResponse(content={
+        "message": "Login successful",
+        "access_token": token,
+
+    })
+
     response.set_cookie(
         key="access_token",
         value=token,
@@ -98,6 +106,6 @@ def reset_password(data: schema.ResetPasswordRequest, db: Session = Depends(get_
         raise HTTPException(status_code=400, detail="Weak password")
 
     # Update password
-    hashed = service.get_password_hash(data.new_password)
+    hashed = security.get_password_hash(data.new_password)
     repository.update_user_password(db, data.email, hashed)
-    return {"msg": "Password reset successful"}
+    return {"msg": "Password reset successfully"}

@@ -1,9 +1,10 @@
 # schema.py
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from uuid import UUID as uuid
 
 class UserResponse(BaseModel):
-    id: int
+    id: uuid
     name: str
     email: EmailStr
     is_verified: bool
@@ -14,3 +15,11 @@ class UserResponse(BaseModel):
 class UpdateUserRequest(BaseModel):
     name: Optional[str]
     email: Optional[EmailStr]
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class LoginSuccessResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
