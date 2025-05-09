@@ -1,9 +1,11 @@
 from pydantic import BaseModel, EmailStr, constr
+from fastapi import UploadFile, File
 
 class RegisterRequest(BaseModel):
     name: str
     email: EmailStr
     password: constr(min_length=8)
+    profile_picture: UploadFile = File(...)
 
 class VerifyEmailRequest(BaseModel):
     email: EmailStr

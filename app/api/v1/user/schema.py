@@ -7,6 +7,7 @@ class UserResponse(BaseModel):
     id: uuid
     name: str
     email: EmailStr
+    profile_picture: Optional[str]
     is_verified: bool
 
     class Config:
@@ -14,7 +15,7 @@ class UserResponse(BaseModel):
 
 class UpdateUserRequest(BaseModel):
     name: Optional[str]
-    email: Optional[EmailStr]
+    profile_picture: Optional[str]
 
 class LoginRequest(BaseModel):
     email: EmailStr

@@ -1,12 +1,15 @@
+from fastapi import Depends
 from sqlalchemy.orm import Session
 from .model import User, OTP
 from datetime import datetime, timedelta
+from ....db.session import get_db
+from ....core.security import get_password_hash
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
-def create_user(db: Session, name: str, email: str, hashed_password: str):
-    user = User(name=name, email=email, hashed_password=hashed_password)
+def create_user(db: Session, name: str, email: str, hashed_password: str, profile_picture: str = None):
+    user = User(name=name, email=email, hashed_password=hashed_password,profile_picture=profile_picture)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -39,3 +42,21 @@ def update_user_password(db: Session, email: str, new_hashed_pw: str):
         user.hashed_password = new_hashed_pw
         db.commit()
 
+def get_or_create_user_from_google(user_info: dict, db: Session) -> User:
+    email = user_info["email"]
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        user = User(
+            email=email,
+            name=user_info.get("name"),
+            profile_picture=user_info.get("picture"),
+            is_verified=True,
+            auth_provider="google",
+            hashed_password=get_password_hash("Hello@123")
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    return user
