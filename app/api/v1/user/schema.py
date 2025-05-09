@@ -2,6 +2,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from uuid import UUID as uuid
+from fastapi import UploadFile
 
 class UserResponse(BaseModel):
     id: uuid
@@ -15,7 +16,7 @@ class UserResponse(BaseModel):
 
 class UpdateUserRequest(BaseModel):
     name: Optional[str]
-    profile_picture: Optional[str]
+    profile_picture: UploadFile = None
 
 class LoginRequest(BaseModel):
     email: EmailStr

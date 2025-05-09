@@ -2,11 +2,15 @@ from sqlalchemy.orm import Session
 from ..auth.model import User
 from . import schema
 from .schema import UpdateUserRequest
+from ....utils.utils import save_profile_picture
 
 def update_user(db: Session, user_id: int, data: schema.UpdateUserRequest):
     user = db.query(User).filter(User.id == user_id).first()
     if data.name:
         user.name = data.name
+    if user.profile_picture:
+        profile_picture_name = save_profile_picture(user.profile_picture, existing_filename=user['profile_picture'])
+        return {"message": "Profile picture updated", "file_path": profile_picture_name}
     if data.profile_picture:
         user.profile_picture = data.profile_picture
     db.commit()

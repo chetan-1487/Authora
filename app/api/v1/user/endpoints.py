@@ -22,3 +22,9 @@ def update_user_info(data: schema.UpdateUserRequest,db: Session = Depends(get_db
 def delete_user_account(db: Session = Depends(get_db),current_user=Depends(get_current_user)):
     repository.delete_user(db, current_user.id)
     return {"msg": "User deleted successfully"}
+
+
+#   name: str = Form(...),
+#     email: str = Form(...),
+#     password: str = Form(...),
+#     profile_picture: UploadFile = File(...),

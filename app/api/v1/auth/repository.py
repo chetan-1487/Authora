@@ -4,6 +4,7 @@ from .model import User, OTP
 from datetime import datetime, timedelta
 from ....db.session import get_db
 from ....core.security import get_password_hash
+from ....utils.utils import save_profile_picture
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
@@ -47,15 +48,27 @@ def get_or_create_user_from_google(user_info: dict, db: Session) -> User:
     user = db.query(User).filter(User.email == email).first()
 
     if not user:
+        # User doesn't exist, create a new user
         user = User(
             email=email,
             name=user_info.get("name"),
             profile_picture=user_info.get("picture"),
             is_verified=True,
             auth_provider="google",
-            hashed_password=get_password_hash("Hello@123")
+            hashed_password=get_password_hash("Hello@123")  # or generate a secure password if needed
         )
+        save_profile_picture(user_info.get("picture"))  # Save profile picture if needed
         db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        # User exists, update the user's information if changed
+        user.name = user_info.get("name", user.name)  # Update name if provided
+        user.profile_picture = user_info.get("picture", user.profile_picture)  # Update profile picture if provided
+        user.is_verified = True  # You can also update verification status if needed
+        user.auth_provider = "google"  # Ensure the auth provider is set as 'google'
+        
+        # Commit changes if any information was updated
         db.commit()
         db.refresh(user)
 
