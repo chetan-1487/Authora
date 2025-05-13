@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.core.config import DATABASE_CONNECTION
+from app.core.config import settings
 
-DATABASE_CONNECTION_URL = DATABASE_CONNECTION
+DATABASE_CONNECTION_URL = settings.DATABASE_CONNECTION
 
 if not DATABASE_CONNECTION_URL:
     raise ValueError("Database connection string is missing. Please check your config file.")

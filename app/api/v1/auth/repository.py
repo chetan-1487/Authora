@@ -4,7 +4,7 @@ from .model import User, OTP
 from datetime import datetime, timedelta
 from ....db.session import get_db
 from ....core.security import get_password_hash
-from ....utils.utils import save_profile_picture
+from ....utils.utils import save_profile_picture_from_url
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
@@ -57,7 +57,7 @@ def get_or_create_user_from_google(user_info: dict, db: Session) -> User:
             auth_provider="google",
             hashed_password=get_password_hash("Hello@123")  # or generate a secure password if needed
         )
-        save_profile_picture(user_info.get("picture"))  # Save profile picture if needed
+        save_profile_picture_from_url(user_info.get("picture"))  # Save profile picture if needed
         db.add(user)
         db.commit()
         db.refresh(user)
