@@ -1,51 +1,60 @@
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from .model import User, OTP
+from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+from .model import OTP
+from sqlalchemy.future import select
 from datetime import datetime, timedelta
-from ....db.session import get_db
 from ....core.security import get_password_hash
 from ....utils.utils import save_profile_picture_from_url
+import httpx
+from ....core.config import settings
+from fastapi.responses import JSONResponse
+from ....core.security import create_access_token
+from ..user.model import User
 
-def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
+async def get_user_by_email(db: AsyncSession, email: str):
+    result = await db.execute(select(User).filter(User.email == email))
+    return result.scalars().first()
 
-def create_user(db: Session, name: str, email: str, hashed_password: str, profile_picture: str = None):
+async def create_user(db: AsyncSession, name: str, email: str, hashed_password: str, profile_picture: str = None):
     user = User(name=name, email=email, hashed_password=hashed_password,profile_picture=profile_picture)
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return user
 
-def store_otp(db: Session, email: str, otp: str):
+async def store_otp(db: AsyncSession, email: str, otp: str):
     expiry = datetime.utcnow() + timedelta(minutes=10)
     db.add(OTP(email=email, otp=otp, expires_at=expiry))
-    db.commit()
+    await db.commit()
 
-def update_otp(db: Session, email: str, otp: str):
+async def update_otp(db: AsyncSession, email: str, otp: str):
     expiry = datetime.utcnow() + timedelta(minutes=10)
-    db.query(OTP).filter(OTP.email == email).update({"otp": otp, "expires_at": expiry})
-    db.commit()
+    await db.execute(
+        OTP.__table__.update()
+        .where(OTP.email == email)
+        .values(otp=otp, expires_at=expiry)
+    )
+    await db.commit()
 
-def verify_otp(db: Session, email: str, otp: str):
-    return db.query(OTP).filter(
-        OTP.email == email,
-        OTP.otp == otp,
-        OTP.expires_at > datetime.utcnow()
-    ).first()
+async def verify_otp(db: AsyncSession, email: str, otp: str):
+    stmt = select(OTP).where(OTP.email == email, OTP.otp == otp)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
-def mark_user_verified(db: Session, user: User):
+async def mark_user_verified(db: AsyncSession, user: User):
     user.is_verified = True
-    db.commit()
+    await db.commit()
 
-def update_user_password(db: Session, email: str, new_hashed_pw: str):
-    user = get_user_by_email(db, email)
+async def update_user_password(db: AsyncSession, email: str, new_hashed_pw: str):
+    user =await get_user_by_email(db, email)
     if user:
         user.hashed_password = new_hashed_pw
-        db.commit()
+        await db.commit()
 
-def get_or_create_user_from_google(user_info: dict, db: Session) -> User:
+async def get_or_create_user_from_google(user_info: dict, db: AsyncSession) -> User:
     email = user_info["email"]
-    user = db.query(User).filter(User.email == email).first()
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalars().first()
 
     if not user:
         # User doesn't exist, create a new user
@@ -57,10 +66,10 @@ def get_or_create_user_from_google(user_info: dict, db: Session) -> User:
             auth_provider="google",
             hashed_password=get_password_hash("Hello@123")  # or generate a secure password if needed
         )
-        save_profile_picture_from_url(user_info.get("picture"))  # Save profile picture if needed
+        await save_profile_picture_from_url(user_info.get("picture"))  # Save profile picture if needed
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
     else:
         # User exists, update the user's information if changed
         user.name = user_info.get("name", user.name)  # Update name if provided
@@ -69,7 +78,52 @@ def get_or_create_user_from_google(user_info: dict, db: Session) -> User:
         user.auth_provider = "google"  # Ensure the auth provider is set as 'google'
         
         # Commit changes if any information was updated
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
 
     return user
+
+async def handle_google_callback(request: Request, db: AsyncSession):
+    code = request.query_params.get("code")
+    if not code:
+        return JSONResponse({"error": "Missing code"}, status_code=400)
+
+    async with httpx.AsyncClient() as client:
+        token_res = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                "grant_type": "authorization_code"
+            }
+        )
+        token_json = token_res.json()
+        id_token = token_json.get("id_token")
+
+        if not id_token:
+            return JSONResponse({"error": "Missing ID token"}, status_code=400)
+
+        user_info_res = await client.get(f"https://www.googleapis.com/oauth2/v3/tokeninfo?id_token={id_token}")
+        user_info = user_info_res.json()
+
+    user = await get_or_create_user_from_google(user_info, db)
+
+    jwt_token = create_access_token({"user_id": str(user.id)})
+
+    response = JSONResponse(content={
+        "message": "Google login successful",
+        "access_token": jwt_token,
+        "token_type": "bearer"
+    })
+
+    # ✅ Set JWT in HttpOnly Cookie
+    response.set_cookie(
+        key="access_token",
+        value=jwt_token,
+        httponly=True,
+        samesite="Lax",  # Use "None" + secure=True if using cross-site cookies
+        secure=False     # Use True in production (HTTPS)
+    )
+    return response

@@ -1,35 +1,53 @@
-from sqlalchemy.orm import Session
-from ..auth.model import User
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from ..user.model import User
 from . import schema
 from .schema import UpdateUserRequest
 from ....utils.utils import save_profile_picture
 
-def update_user(db: Session, user_id: int, data: schema.UpdateUserRequest):
-    user = db.query(User).filter(User.id == user_id).first()
+
+async def update_user(db: AsyncSession, user_id: int, data: schema.UpdateUserRequest):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return None
+
+    # Update name if provided
     if data.name:
         user.name = data.name
-    if user.profile_picture:
-        profile_picture_name = save_profile_picture(user.profile_picture, existing_filename=user['profile_picture'])
-        return {"message": "Profile picture updated", "file_path": profile_picture_name}
+
+    # Handle profile picture update
     if data.profile_picture:
-        user.profile_picture = data.profile_picture
-    db.commit()
-    db.refresh(user)
+        profile_picture_name = save_profile_picture(
+            data.profile_picture,
+            existing_filename=user.profile_picture if user.profile_picture else None
+        )
+        user.profile_picture = profile_picture_name
+
+    await db.commit()
+    await db.refresh(user)
     return user
 
-def delete_user(db: Session, user_id: int):
-    user = db.query(User).filter(User.id == user_id).first()
-    db.delete(user)
-    db.commit()
 
-def get_user_by_id(db: Session, user_id: int):
-    return db.query(User).filter(User.id == user_id).first()
+async def delete_user(db: AsyncSession, user_id: int):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user:
+        await db.delete(user)
+        await db.commit()
 
 
-def update_user_in_db(user: User, data: UpdateUserRequest, db: Session):
+async def get_user_by_id(db: AsyncSession, user_id: int):
+    result = await db.execute(select(User).where(User.id == user_id))
+    return result.scalar_one_or_none()
+
+
+async def update_user_in_db(user: User, data: UpdateUserRequest, db: AsyncSession):
     for key, value in data.dict(exclude_unset=True).items():
         setattr(user, key, value)
+
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return user

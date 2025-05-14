@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
@@ -7,12 +7,16 @@ DATABASE_CONNECTION_URL = settings.DATABASE_CONNECTION
 if not DATABASE_CONNECTION_URL:
     raise ValueError("Database connection string is missing. Please check your config file.")
 
-engine = create_engine(DATABASE_CONNECTION_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+async_engine = create_async_engine(DATABASE_CONNECTION_URL, echo=False)
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+AsyncSessionLocal = sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
+)
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session

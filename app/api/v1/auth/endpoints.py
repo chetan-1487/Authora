@@ -1,64 +1,58 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
-import uuid
-from sqlalchemy.orm import Session
-from sqlalchemy import select
-from . import schema,service, repository
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, Response,status
+from sqlalchemy.ext.asyncio import AsyncSession
+from . import schema, repository
 from ....core import security
 from ....db.session import get_db
 from ....services.mock_email_service import send_otp_email
 from fastapi.responses import JSONResponse, RedirectResponse
 from ....core import security
-from ..auth.service import get_google_authorize_url, handle_google_callback
-import os
+from ..auth.service import get_google_authorize_url
 from ....utils.utils import save_profile_picture
+from ....utils.utils import generate_otp
+from .repository import handle_google_callback
 
 router = APIRouter(
     tags=["User Registration"]
 )
 
 @router.post("/auth/register")
-def register(
+async def register(
     name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
     profile_picture: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
-    if repository.get_user_by_email(db, email):
+    user = await repository.get_user_by_email(db, email)
+    if user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    if not service.is_password_strong(password):
-        raise HTTPException(status_code=400, detail="Weak password")
-
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
-
     hashed_password = security.get_password_hash(password)
-    profile_picture_name = save_profile_picture(profile_picture)
+    profile_picture_name =await save_profile_picture(profile_picture)
 
     # Pass saved image path (not file object) to DB
-    user = repository.create_user(db, name, email, hashed_password, profile_picture_name)
+    await repository.create_user(db, name, email, hashed_password, profile_picture_name)
 
-    otp = service.generate_otp()
-    repository.store_otp(db, email, otp)
-    send_otp_email(email, otp)
+    otp = generate_otp()
+    await repository.store_otp(db, email, otp)
+    await send_otp_email(email, otp)
 
     return {"msg": "OTP sent for email verification"}
 
 @router.post("/auth/verify-email")
-def verify_email(data: schema.VerifyEmailRequest, db: Session = Depends(get_db)):
-    user = repository.get_user_by_email(db, data.email)
+async def verify_email(data: schema.VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+    user =await repository.get_user_by_email(db, data.email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    otp_record = repository.verify_otp(db, data.email, data.otp)
+    otp_record =await repository.verify_otp(db, data.email, data.otp)
     if not otp_record:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-    repository.mark_user_verified(db, user)
+    await repository.mark_user_verified(db, user)
     return JSONResponse(status_code=201,content={"msg": "Email verified successfully"})
 
 @router.post("/auth/login", response_model=schema.TokenResponse)
-def login(data: schema.LoginRequest, db: Session = Depends(get_db)):
-    user = repository.get_user_by_email(db, data.email)
+async def login(data: schema.LoginRequest, db: AsyncSession = Depends(get_db)):
+    user =await repository.get_user_by_email(db, data.email)
     if not user or not security.verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     if not user.is_verified:
@@ -82,64 +76,60 @@ def login(data: schema.LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/verify-resend-otp")
-def resend_otp(email: str, db: Session = Depends(get_db)):
-    user = repository.get_user_by_email(db, email)
+async def resend_otp(email: str, db: AsyncSession = Depends(get_db)):
+    user =await repository.get_user_by_email(db, email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     if user.is_verified:
         raise HTTPException(status_code=400, detail="User is already verified")
 
-    otp = service.generate_otp()
-    repository.update_otp(db, email, otp)
+    otp = generate_otp()
+    await repository.update_otp(db, email, otp)
 
-    send_otp_email(email, otp)
+    await send_otp_email(email, otp)
     print(otp)
 
     return {"msg": "OTP sent successfully"}
 
 @router.post("/auth/forgot-password")
-def forgot_password(data: schema.ForgotPasswordRequest, db: Session = Depends(get_db)):
-    user = repository.get_user_by_email(db, data.email)
+async def forgot_password(data: schema.ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    user =await repository.get_user_by_email(db, data.email)
     if not user:
         raise HTTPException(status_code=404, detail="Email not found")
 
-    otp = service.generate_otp()
-    repository.store_otp(db, data.email, otp)
-    send_otp_email(data.email, otp)
+    otp = generate_otp()
+    await repository.store_otp(db, data.email, otp)
+    await send_otp_email(data.email, otp)
     return {"msg": "OTP sent to your email for password reset"}
 
 
 @router.put("/auth/reset-password")
-def reset_password(data: schema.ResetPasswordRequest, db: Session = Depends(get_db)):
+async def reset_password(data: schema.ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
     # Verify OTP
-    valid = repository.verify_otp(db, data.email, data.otp)
+    valid =await repository.verify_otp(db, data.email, data.otp)
     if not valid:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    # Validate password strength
-    if len(data.new_password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-    if not service.is_password_strong(data.new_password):
-        raise HTTPException(status_code=400, detail="Weak password")
-
     # Update password
     hashed = security.get_password_hash(data.new_password)
-    repository.update_user_password(db, data.email, hashed)
+    await repository.update_user_password(db, data.email, hashed)
     return {"msg": "Password reset successfully"}
 
-@router.post("/logout")
-def logout():
-    """
-    Client should discard the JWT token after calling this.
-    """
-    return {"message": "Successfully logged out. Please discard the token on the client."}
 
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(response: Response):
+    """
+    Logs out the user by removing JWT cookies.
+    """
+    response.delete_cookie(key="access_token", httponly=True, secure=True)
+    response.delete_cookie(key="refresh_token", httponly=True, secure=True)
+    return {"message": "Logout successful"}
 
 @router.get("/api/v1/auth/google/login")
-def google_login():
+async def google_login():
     return RedirectResponse(get_google_authorize_url())
 
 @router.get("/api/v1/auth/google/callback")
-def google_callback(request: Request, db: Session = Depends(get_db)):
-    return handle_google_callback(request,db)
+async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
+    return await handle_google_callback(request,db)
