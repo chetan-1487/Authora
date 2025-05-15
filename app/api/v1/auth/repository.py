@@ -3,12 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .model import OTP
 from sqlalchemy.future import select
 from datetime import datetime, timedelta
-from ....core.security import get_password_hash
+from ....core.security import get_password_hash, create_access_token
 from ....utils.utils import save_profile_picture_from_url
 import httpx
 from ....core.config import settings
 from fastapi.responses import JSONResponse
-from ....core.security import create_access_token
 from ..user.model import User
 
 async def get_user_by_email(db: AsyncSession, email: str):
@@ -118,7 +117,6 @@ async def handle_google_callback(request: Request, db: AsyncSession):
         "token_type": "bearer"
     })
 
-    # ✅ Set JWT in HttpOnly Cookie
     response.set_cookie(
         key="access_token",
         value=jwt_token,

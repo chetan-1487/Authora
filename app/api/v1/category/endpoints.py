@@ -21,10 +21,10 @@ async def get_category(id: UUID, db: AsyncSession = Depends(get_db), user: User 
     return category
 
 
-@router.post("/categories")
+@router.post("/categories",response_model=schema.CategoryOut)
 async def create_category(data: schema.CategoryCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     new_category= await repository.create_category(db, data)
-    return JSONResponse(status_code=201, content={"message": "Category created"})
+    return new_category
 
 
 @router.put("/categories/{id}", response_model=schema.CategoryOut)

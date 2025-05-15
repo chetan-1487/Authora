@@ -2,3 +2,5 @@ myenv
 .env
 uploaded_images
 __pycache__
+localstack
+localstack-data

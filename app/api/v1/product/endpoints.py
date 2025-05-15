@@ -7,6 +7,8 @@ from ..user.service import get_current_user
 from ..user.model import User
 from uuid import UUID
 from fastapi.responses import JSONResponse
+from datetime import datetime, timedelta
+import uuid
 
 router = APIRouter(
     tags=["Products"]
@@ -27,7 +29,7 @@ async def get_product(id: UUID, db: AsyncSession = Depends(get_db),user: User = 
 async def create_product(product_data: schema.ProductCreate = Depends(schema.ProductCreate.as_form), image: UploadFile = File(None), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     image_url = await save_product_image(image) if image else None
     new_product= await repository.create_product(db, product_data, image_url)
-    return JSONResponse(status_code=201, content={"message": "Product created"})
+    return new_product
 
 @router.put("/products/{id}", response_model=schema.ProductOut)
 async def update_product(id: UUID, product_data: schema.ProductUpdate = Depends(schema.ProductUpdate.as_form), image: UploadFile = File(None), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
@@ -43,3 +45,16 @@ async def delete_product(id: UUID, db: AsyncSession = Depends(get_db),user: User
     if not success:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"detail": "Product deleted"}
+
+signed_urls = {}
+
+@router.post("/upload")
+async def upload_image(file: UploadFile):
+    signed_url = await save_product_image(file)
+    image_id = str(uuid.uuid4())
+    signed_urls[image_id] = {
+        "url": signed_url,
+        "created_at": datetime.utcnow(),
+        "expires_in": timedelta(seconds=1)  # 5 minutes
+    }
+    return {"image_id": image_id}

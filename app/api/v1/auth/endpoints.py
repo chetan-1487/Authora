@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, Response,status
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import schema, repository
-from ....core import security
+from ....core.security import verify_password, create_access_token, get_password_hash
+from sqlalchemy.future import select
 from ....db.session import get_db
 from ....services.mock_email_service import send_otp_email
 from fastapi.responses import JSONResponse, RedirectResponse
-from ....core import security
 from ..auth.service import get_google_authorize_url
-from ....utils.utils import save_profile_picture
-from ....utils.utils import generate_otp
+from ....utils.utils import save_profile_picture, generate_otp
 from .repository import handle_google_callback
 
 router = APIRouter(
@@ -21,7 +20,7 @@ async def register(name: str = Form(...), email: str = Form(...), password: str 
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    hashed_password = security.get_password_hash(password)
+    hashed_password = get_password_hash(password)
     profile_picture_name =await save_profile_picture(profile_picture)
 
     # Pass saved image path (not file object) to DB
@@ -47,11 +46,11 @@ async def verify_email(data: schema.VerifyEmailRequest, db: AsyncSession = Depen
 @router.post("/auth/login", response_model=schema.TokenResponse)
 async def login(data: schema.LoginRequest, db: AsyncSession = Depends(get_db)):
     user =await repository.get_user_by_email(db, data.email)
-    if not user or not security.verify_password(data.password, user.hashed_password):
+    if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     if not user.is_verified:
         raise HTTPException(status_code=403, detail="Email not verified")
-    token = security.create_access_token({"user_id": str(user.id)})
+    token = create_access_token({"user_id": str(user.id)})
     
     response = JSONResponse(content={
         "message": "Login successful",
@@ -106,19 +105,9 @@ async def reset_password(data: schema.ResetPasswordRequest, db: AsyncSession = D
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
     # Update password
-    hashed = security.get_password_hash(data.new_password)
+    hashed = get_password_hash(data.new_password)
     await repository.update_user_password(db, data.email, hashed)
     return {"msg": "Password reset successfully"}
-
-
-@router.post("/logout", status_code=status.HTTP_200_OK)
-async def logout(response: Response):
-    """
-    Logs out the user by removing JWT cookies.
-    """
-    response.delete_cookie(key="access_token", httponly=True, secure=True)
-    response.delete_cookie(key="refresh_token", httponly=True, secure=True)
-    return {"message": "Logout successful"}
 
 @router.get("/api/v1/auth/google/login")
 async def google_login():

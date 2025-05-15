@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update as sqlalchemy_update
 from .model import Category
+from ..product.model import Product
 from . import schema
 from uuid import UUID
 
@@ -23,13 +24,12 @@ async def create_category(db: AsyncSession, data: schema.CategoryCreate):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Category with this name already exists."
         )
-
     # Create and insert new category
     category = Category(**data.dict())
     db.add(category)
     await db.commit()
     await db.refresh(category)
-    return {"message": "Successfully created", "category_id": str(category.id)}
+    return category
 
 async def update_category(db: AsyncSession, id: UUID, data: schema.CategoryUpdate):
     result = await db.execute(select(Category).where(Category.id == id))
@@ -45,11 +45,23 @@ async def update_category(db: AsyncSession, id: UUID, data: schema.CategoryUpdat
     return category
 
 async def delete_category(db: AsyncSession, id: UUID):
+    # Step 1: Check if any products are linked to the category
+    product_check = await db.execute(
+        select(Product).where(Product.category_id == id)
+    )
+    if product_check.first():  # Product(s) found
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete category. Products exist in this category."
+        )
+
+    # Step 2: Retrieve the category
     result = await db.execute(select(Category).where(Category.id == id))
     category = result.scalar_one_or_none()
     if not category:
         return False
 
+    # Step 3: Delete and commit
     await db.delete(category)
     await db.commit()
     return True
