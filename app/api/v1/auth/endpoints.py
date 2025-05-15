@@ -16,13 +16,7 @@ router = APIRouter(
 )
 
 @router.post("/auth/register")
-async def register(
-    name: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    profile_picture: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db)
-):
+async def register(name: str = Form(...), email: str = Form(...), password: str = Form(...), profile_picture: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     user = await repository.get_user_by_email(db, email)
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")

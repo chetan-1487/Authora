@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, DateTime,Text
+from sqlalchemy.orm import relationship
 from ....db.base import Base
 from datetime import datetime,timezone
 from sqlalchemy.dialects.postgresql import UUID
@@ -11,3 +12,5 @@ class Category(Base):
     description = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    products = relationship("Product", back_populates="category",cascade="all, delete", passive_deletes=True )

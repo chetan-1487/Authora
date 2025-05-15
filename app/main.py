@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .api.v1.auth.endpoints import router as auth_router
 from .api.v1.user.endpoints import router as user_router
@@ -13,8 +14,22 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     yield  # App runs here
 
-
 app = FastAPI(lifespan=lifespan)
+
+# Set up CORS
+origins = [
+    "http://localhost",
+    "http://localhost:3000",  # Frontend dev server (React/Next.js)
+    "https://yourfrontenddomain.com"  # Production frontend domain
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Allows these origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 @app.get("/")
 async def root():

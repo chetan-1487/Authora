@@ -2,12 +2,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import and_
 from . import model, schema
+from uuid import UUID
+
 
 async def get_products(
     db: AsyncSession,
     skip: int = 0,
     limit: int = 10,
-    category_id: int = None,
+    category_id: UUID = None,
     min_price: float = None,
     max_price: float = None
 ):
@@ -28,7 +30,7 @@ async def get_products(
     result = await db.execute(query)
     return result.scalars().all()
 
-async def get_product(db: AsyncSession, id: int):
+async def get_product(db: AsyncSession, id: UUID):
     result = await db.execute(select(model.Product).where(model.Product.id == id))
     return result.scalar_one_or_none()
 
