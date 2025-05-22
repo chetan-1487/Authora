@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, Response,status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import schema, repository
 from ....core.security import verify_password, create_access_token, get_password_hash
-from sqlalchemy.future import select
 from ....db.session import get_db
 from ....services.mock_email_service import send_otp_email
 from fastapi.responses import JSONResponse, RedirectResponse
