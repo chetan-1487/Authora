@@ -9,13 +9,14 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from ..auth.service import get_google_authorize_url
 from ....utils.utils import save_profile_picture, generate_otp
 from .repository import handle_google_callback
+from pydantic import EmailStr
 
 router = APIRouter(
     tags=["User Registration"]
 )
 
 @router.post("/auth/register")
-async def register(name: str = Form(...), email: str = Form(...), password: str = Form(...), profile_picture: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+async def register(name: str = Form(...), email: EmailStr = Form(...), password: str = Form(...), profile_picture: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     user = await repository.get_user_by_email(db, email)
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -63,7 +64,7 @@ async def login(data: schema.LoginRequest, db: AsyncSession = Depends(get_db)):
         value=token,
         httponly=True,
         samesite="Lax",     # or "Strict" or "None"
-        secure=False        # True in production (HTTPS only)
+        secure=False       # True in production (HTTPS only)
     )
     return response
 
@@ -96,6 +97,10 @@ async def forgot_password(data: schema.ForgotPasswordRequest, db: AsyncSession =
     await send_otp_email(data.email, otp)
     return {"msg": "OTP sent to your email for password reset"}
 
+@router.post("/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="access_token")
+    return {"msg": "Logout successful"}
 
 @router.put("/auth/reset-password")
 async def reset_password(data: schema.ResetPasswordRequest, db: AsyncSession = Depends(get_db)):

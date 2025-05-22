@@ -113,8 +113,7 @@ async def handle_google_callback(request: Request, db: AsyncSession):
 
     response = JSONResponse(content={
         "message": "Google login successful",
-        "access_token": jwt_token,
-        "token_type": "bearer"
+        "access_token": jwt_token
     })
 
     response.set_cookie(
