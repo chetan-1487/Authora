@@ -15,15 +15,11 @@ import csv
 from io import StringIO
 from sqlalchemy.exc import SQLAlchemyError
 
-router = APIRouter(
-    tags=["Products"]
-)
+router = APIRouter(tags=["Products"])
+
 
 @router.post("/upload-csv")
-async def upload_csv(
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db)
-):
+async def upload_csv(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed")
 
@@ -35,7 +31,7 @@ async def upload_csv(
     if not required_fields.issubset(reader.fieldnames):
         raise HTTPException(
             status_code=400,
-            detail=f"CSV must include columns: {', '.join(required_fields)}"
+            detail=f"CSV must include columns: {', '.join(required_fields)}",
         )
 
     added = 0
@@ -46,7 +42,9 @@ async def upload_csv(
             category_id = UUID(row["category_id"])
             # Check if product already exists
             existing = await db.execute(
-                select(Product).where(Product.name == name, Product.category_id == category_id)
+                select(Product).where(
+                    Product.name == name, Product.category_id == category_id
+                )
             )
             existing_product = existing.scalar_one_or_none()
 
@@ -74,10 +72,7 @@ async def upload_csv(
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-    return {
-        "message": f"{added} products uploaded successfully",
-        "skipped": skipped
-    }
+    return {"message": f"{added} products uploaded successfully", "skipped": skipped}
 
 
 @router.get("/products", response_model=list[schema.ProductOut])
@@ -88,40 +83,65 @@ async def list_products(
     category_id: Optional[UUID] = Query(None),
     min_price: Optional[float] = Query(None),
     max_price: Optional[float] = Query(None),
-    search: Optional[str] = Query(None),  
+    search: Optional[str] = Query(None),
     user: User = Depends(get_current_user),
 ):
-    return await repository.get_products(db, skip, limit, category_id, min_price, max_price, search)
+    return await repository.get_products(
+        db, skip, limit, category_id, min_price, max_price, search
+    )
+
 
 @router.get("/products/{id}", response_model=schema.ProductOut)
-async def get_product(id: UUID, db: AsyncSession = Depends(get_db),user: User = Depends(get_current_user)):
+async def get_product(
+    id: UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
+):
     product = await repository.get_product(db, id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
+
 @router.post("/products/", response_model=schema.ProductOut)
-async def create_product(product_data: schema.ProductCreate = Depends(schema.ProductCreate.as_form), image: UploadFile = File(None), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+async def create_product(
+    product_data: schema.ProductCreate = Depends(schema.ProductCreate.as_form),
+    image: UploadFile = File(None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     image_url = await save_product_image(image) if image else None
-    if product_data.price <=0:
+    if product_data.price <= 0:
         raise HTTPException(status_code=400, detail="Price must be greater than 0")
-    result = await db.execute(select(Category).where(Category.id == product_data.category_id))
+    result = await db.execute(
+        select(Category).where(Category.id == product_data.category_id)
+    )
     category = result.scalars().first()
 
     if not category:
         raise HTTPException(status_code=400, detail="Category ID is not valid")
-    new_product= await repository.create_product(db, product_data, image_url)
+    new_product = await repository.create_product(db, product_data, image_url)
     return new_product
 
+
 @router.put("/products/{id}", response_model=schema.ProductOut)
-async def update_product(id: UUID, product_data: schema.ProductUpdate = Depends(schema.ProductUpdate.as_form), image: UploadFile = File(None), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+async def update_product(
+    id: UUID,
+    product_data: schema.ProductUpdate = Depends(schema.ProductUpdate.as_form),
+    image: UploadFile = File(None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     image_url = await save_product_image(image) if image else None
     product = await repository.update_product(db, id, product_data, image_url)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
+
 @router.delete("/products/{product_id}")
-async def delete_product_with_id(product_id: UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+async def delete_product_with_id(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     await delete_product(db, product_id)
     return {"detail": "Product deleted."}

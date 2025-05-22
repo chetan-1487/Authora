@@ -5,3 +5,4 @@ __pycache__
 localstack
 localstack-data
 h.csv
+.flake8

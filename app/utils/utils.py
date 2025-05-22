@@ -28,15 +28,17 @@ s3 = boto3.client(
     aws_access_key_id="test",
     aws_secret_access_key="test",
     region_name=REGION,
-    config=Config(signature_version="s3v4")
+    config=Config(signature_version="s3v4"),
 )
+
 
 # Ensure the bucket exists
 def ensure_bucket_exists():
-    existing_buckets = s3.list_buckets().get('Buckets', [])
-    if not any(bucket['Name'] == BUCKET_NAME for bucket in existing_buckets):
+    existing_buckets = s3.list_buckets().get("Buckets", [])
+    if not any(bucket["Name"] == BUCKET_NAME for bucket in existing_buckets):
         s3.create_bucket(Bucket=BUCKET_NAME)
         print(f"Created bucket: {BUCKET_NAME}")
+
 
 # Async save product image to S3
 async def save_product_image(file: UploadFile) -> str:
@@ -53,24 +55,31 @@ async def save_product_image(file: UploadFile) -> str:
             Key=key,
             Body=content,
             ContentType=file.content_type,
-        )
+        ),
     )
 
     signed_url = s3.generate_presigned_url(
-        ClientMethod='get_object',
-        Params={'Bucket': BUCKET_NAME, 'Key': key},
-        ExpiresIn=300
+        ClientMethod="get_object",
+        Params={"Bucket": BUCKET_NAME, "Key": key},
+        ExpiresIn=300,
     )
-    
+
     return signed_url
 
+
 # Async save profile picture (from UploadFile)
-async def save_profile_picture(profile_picture: UploadFile, existing_filename: str = None):
+async def save_profile_picture(
+    profile_picture: UploadFile, existing_filename: str = None
+):
     file_content = await profile_picture.read()
     image = Image.open(BytesIO(file_content))
 
     file_extension = image.format.lower()
-    unique_filename = f"{uuid.uuid4()}.{file_extension}" if existing_filename is None else existing_filename
+    unique_filename = (
+        f"{uuid.uuid4()}.{file_extension}"
+        if existing_filename is None
+        else existing_filename
+    )
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
     buffer = BytesIO()
@@ -82,8 +91,11 @@ async def save_profile_picture(profile_picture: UploadFile, existing_filename: s
 
     return unique_filename
 
+
 # Async save profile picture from a URL
-async def save_profile_picture_from_url(profile_picture_url: str, existing_filename: str = None):
+async def save_profile_picture_from_url(
+    profile_picture_url: str, existing_filename: str = None
+):
     if not profile_picture_url:
         return None
 
@@ -94,7 +106,11 @@ async def save_profile_picture_from_url(profile_picture_url: str, existing_filen
 
             image = Image.open(BytesIO(response.content))
             file_extension = image.format.lower()
-            unique_filename = f"{uuid.uuid4()}.{file_extension}" if existing_filename is None else existing_filename
+            unique_filename = (
+                f"{uuid.uuid4()}.{file_extension}"
+                if existing_filename is None
+                else existing_filename
+            )
             file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
             buffer = BytesIO()
@@ -109,6 +125,7 @@ async def save_profile_picture_from_url(profile_picture_url: str, existing_filen
         print("Error saving profile picture from URL:", e)
         return None
 
+
 # OTP Generator
 def generate_otp() -> str:
-    return ''.join(random.choices(string.digits, k=6))
+    return "".join(random.choices(string.digits, k=6))

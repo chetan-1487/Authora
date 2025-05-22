@@ -5,7 +5,9 @@ from app.core.config import settings
 DATABASE_CONNECTION_URL = settings.DATABASE_CONNECTION
 
 if not DATABASE_CONNECTION_URL:
-    raise ValueError("Database connection string is missing. Please check your config file.")
+    raise ValueError(
+        "Database connection string is missing. Please check your config file."
+    )
 
 async_engine = create_async_engine(DATABASE_CONNECTION_URL, echo=False)
 
@@ -16,6 +18,7 @@ AsyncSessionLocal = sessionmaker(
     autoflush=False,
     autocommit=False,
 )
+
 
 async def get_db():
     async with AsyncSessionLocal() as session:

@@ -4,6 +4,7 @@ from typing import Optional
 from uuid import UUID as uuid
 from fastapi import UploadFile
 
+
 class UserResponse(BaseModel):
     id: uuid
     name: str
@@ -14,13 +15,16 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class UpdateUserRequest(BaseModel):
     name: Optional[str]
     profile_picture: UploadFile = None
 
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
 
 class LoginSuccessResponse(BaseModel):
     access_token: str

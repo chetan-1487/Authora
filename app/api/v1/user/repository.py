@@ -21,7 +21,7 @@ async def update_user(db: AsyncSession, user_id: int, data: schema.UpdateUserReq
     if data.profile_picture:
         profile_picture_name = save_profile_picture(
             data.profile_picture,
-            existing_filename=user.profile_picture if user.profile_picture else None
+            existing_filename=user.profile_picture if user.profile_picture else None,
         )
         user.profile_picture = profile_picture_name
 

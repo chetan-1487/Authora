@@ -1,6 +1,7 @@
 from app.core.config import settings
 from urllib.parse import urlencode
 
+
 def get_google_authorize_url():
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
@@ -8,6 +9,6 @@ def get_google_authorize_url():
         "response_type": "code",
         "scope": "openid email profile",
         "access_type": "offline",
-        "prompt": "consent"
+        "prompt": "consent",
     }
     return f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"

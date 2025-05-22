@@ -20,9 +20,15 @@ class ProductCreate(BaseModel):
         description: Optional[str] = Form(None),
         price: Decimal = Form(...),
         stock: Optional[int] = Form(0),
-        category_id: UUID = Form(...)
+        category_id: UUID = Form(...),
     ):
-        return cls(name=name, description=description, price=price, stock=stock, category_id=category_id)
+        return cls(
+            name=name,
+            description=description,
+            price=price,
+            stock=stock,
+            category_id=category_id,
+        )
 
 
 class ProductUpdate(BaseModel):
@@ -39,9 +45,15 @@ class ProductUpdate(BaseModel):
         description: Optional[str] = Form(None),
         price: Optional[Decimal] = Form(None),
         stock: Optional[int] = Form(None),
-        category_id: Optional[UUID] = Form(None)
+        category_id: Optional[UUID] = Form(None),
     ):
-        return cls(name=name, description=description, price=price, stock=stock, category_id=category_id)
+        return cls(
+            name=name,
+            description=description,
+            price=price,
+            stock=stock,
+            category_id=category_id,
+        )
 
 
 class ProductOut(BaseModel):

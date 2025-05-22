@@ -1,4 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    UploadFile,
+    File,
+    Form,
+    Response,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import schema, repository
 from ....core.security import verify_password, create_access_token, get_password_hash
@@ -10,18 +19,23 @@ from ....utils.utils import save_profile_picture, generate_otp
 from .repository import handle_google_callback
 from pydantic import EmailStr
 
-router = APIRouter(
-    tags=["User Registration"]
-)
+router = APIRouter(tags=["User Registration"])
+
 
 @router.post("/auth/register")
-async def register(name: str = Form(...), email: EmailStr = Form(...), password: str = Form(...), profile_picture: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+async def register(
+    name: str = Form(...),
+    email: EmailStr = Form(...),
+    password: str = Form(...),
+    profile_picture: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
     user = await repository.get_user_by_email(db, email)
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = get_password_hash(password)
-    profile_picture_name =await save_profile_picture(profile_picture)
+    profile_picture_name = await save_profile_picture(profile_picture)
 
     # Pass saved image path (not file object) to DB
     await repository.create_user(db, name, email, hashed_password, profile_picture_name)
@@ -32,45 +46,50 @@ async def register(name: str = Form(...), email: EmailStr = Form(...), password:
 
     return {"msg": "OTP sent for email verification"}
 
+
 @router.post("/auth/verify-email")
-async def verify_email(data: schema.VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
-    user =await repository.get_user_by_email(db, data.email)
+async def verify_email(
+    data: schema.VerifyEmailRequest, db: AsyncSession = Depends(get_db)
+):
+    user = await repository.get_user_by_email(db, data.email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    otp_record =await repository.verify_otp(db, data.email, data.otp)
+    otp_record = await repository.verify_otp(db, data.email, data.otp)
     if not otp_record:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
     await repository.mark_user_verified(db, user)
-    return JSONResponse(status_code=201,content={"msg": "Email verified successfully"})
+    return JSONResponse(status_code=201, content={"msg": "Email verified successfully"})
+
 
 @router.post("/auth/login", response_model=schema.TokenResponse)
 async def login(data: schema.LoginRequest, db: AsyncSession = Depends(get_db)):
-    user =await repository.get_user_by_email(db, data.email)
+    user = await repository.get_user_by_email(db, data.email)
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     if not user.is_verified:
         raise HTTPException(status_code=403, detail="Email not verified")
     token = create_access_token({"user_id": str(user.id)})
-    
-    response = JSONResponse(content={
-        "message": "Login successful",
-        "access_token": token,
 
-    })
+    response = JSONResponse(
+        content={
+            "message": "Login successful",
+            "access_token": token,
+        }
+    )
 
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        samesite="Lax",     # or "Strict" or "None"
-        secure=False       # True in production (HTTPS only)
+        samesite="Lax",  # or "Strict" or "None"
+        secure=False,  # True in production (HTTPS only)
     )
     return response
 
 
 @router.post("/auth/verify-resend-otp")
 async def resend_otp(email: str, db: AsyncSession = Depends(get_db)):
-    user =await repository.get_user_by_email(db, email)
+    user = await repository.get_user_by_email(db, email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -85,9 +104,12 @@ async def resend_otp(email: str, db: AsyncSession = Depends(get_db)):
 
     return {"msg": "OTP sent successfully"}
 
+
 @router.post("/auth/forgot-password")
-async def forgot_password(data: schema.ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
-    user =await repository.get_user_by_email(db, data.email)
+async def forgot_password(
+    data: schema.ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
+):
+    user = await repository.get_user_by_email(db, data.email)
     if not user:
         raise HTTPException(status_code=404, detail="Email not found")
 
@@ -96,15 +118,19 @@ async def forgot_password(data: schema.ForgotPasswordRequest, db: AsyncSession =
     await send_otp_email(data.email, otp)
     return {"msg": "OTP sent to your email for password reset"}
 
+
 @router.post("/auth/logout")
 async def logout(response: Response):
     response.delete_cookie(key="access_token")
     return {"msg": "Logout successful"}
 
+
 @router.put("/auth/reset-password")
-async def reset_password(data: schema.ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def reset_password(
+    data: schema.ResetPasswordRequest, db: AsyncSession = Depends(get_db)
+):
     # Verify OTP
-    valid =await repository.verify_otp(db, data.email, data.otp)
+    valid = await repository.verify_otp(db, data.email, data.otp)
     if not valid:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
@@ -113,10 +139,12 @@ async def reset_password(data: schema.ResetPasswordRequest, db: AsyncSession = D
     await repository.update_user_password(db, data.email, hashed)
     return {"msg": "Password reset successfully"}
 
+
 @router.get("/api/v1/auth/google/login")
 async def google_login():
     return RedirectResponse(get_google_authorize_url())
 
+
 @router.get("/api/v1/auth/google/callback")
 async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
-    return await handle_google_callback(request,db)
+    return await handle_google_callback(request, db)
