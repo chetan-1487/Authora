@@ -25,22 +25,33 @@ A full-featured backend for an ecommerce platform built with FastAPI, PostgreSQL
 .
 ├── app/
 │   ├── api/
-│   │   ├── v1/
-│   │   │   ├── auth
-│   │   │   ├── category
-|   |   |   ├── product
-|   |   |   └── user
+│   │   └── v1/
+│   │       ├── auth
+|   |       |     ├── endpoints.py
+|   |       |     ├── model.py
+|   |       |     ├── repository.py
+|   |       |     ├── schema.py
+|   |       |     └── service.py
+│   │       ├── category
+|   |       |     ├── endpoints.py
+|   |       |     ├── model.py
+|   |       |     ├── repository.py
+|   |       |     └── schema.py
+|   |       ├── product
+|   |       |     ├── endpoints.py
+|   |       |     ├── model.py
+|   |       |     ├── repository.py
+|   |       |     └── schema.py
+|   |       └── user
+|   |             ├── endpoints.py
+|   |             ├── model.py
+|   |             ├── repository.py
+|   |             ├── schema.py
+|   |             └── service.py
 │   ├── core/
 │   │   ├── config.py
-│   │   ├── security.py
-│   ├── models/
-│   │   ├── user.py
-│   │   ├── product.py
-│   ├── schemas/
-│   │   ├── user.py
-│   │   ├── product.py
+│   │   └── security.py
 │   ├── services/
-│   │   ├── google_auth.py
 │   │   ├── s3_service.py
 |   |   ├── email_service.py
 |   |   └── mock_email_service.py
@@ -54,7 +65,8 @@ A full-featured backend for an ecommerce platform built with FastAPI, PostgreSQL
 │   └── env.py
 ├── requirements.txt
 ├── .env
-└── README.md
+├── README.md
+└── docker-compose.yml
 ```
 
 ---
@@ -91,6 +103,11 @@ S3_ENDPOINT=http://localhost:4566
 ---
 
 ## 🛠️ Setup Instructions
+
+### Prerequisites
+- Python 3.9 or later
+- PostgreSQL database for storing user, category and product details
+- A virtual environment is recommended.
 
 ### 1. Clone & Create Environment
 
