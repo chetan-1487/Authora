@@ -3,7 +3,7 @@ from jose import JWTError, jwt
 from app.core.config import settings
 from app.db.session import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..user.model import User
+from .model import User
 from .repository import update_user_in_db, get_user_by_id
 
 

@@ -14,7 +14,7 @@ from ....core.security import verify_password, create_access_token, get_password
 from ....db.session import get_db
 from ....services.mock_email_service import send_otp_email
 from fastapi.responses import JSONResponse, RedirectResponse
-from ..auth.service import get_google_authorize_url
+from .service import get_google_authorize_url
 from ....utils.utils import save_profile_picture, generate_otp
 from .repository import handle_google_callback
 from pydantic import EmailStr

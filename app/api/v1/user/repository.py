@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..user.model import User
+from .model import User
 from . import schema
 from .schema import UpdateUserRequest
 from ....utils.utils import save_profile_picture
