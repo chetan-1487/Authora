@@ -42,6 +42,8 @@ async def get_product(db: AsyncSession, id: UUID):
     result = await db.execute(
         select(Product).where(Product.id == id, Product.is_active)
     )
+    if not result:
+        raise HTTPException(status_code=404, detail="Invalid product ID")
     return result.scalar_one_or_none()
 
 

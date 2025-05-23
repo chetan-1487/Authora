@@ -14,6 +14,8 @@ async def get_all_categories(db: AsyncSession):
 
 async def get_category(db: AsyncSession, id: UUID):
     result = await db.execute(select(Category).where(Category.id == id))
+    if not result:
+        raise HTTPException(status_code=404, detail="Invalid product ID")
     return result.scalar_one_or_none()
 
 
@@ -38,7 +40,7 @@ async def update_category(db: AsyncSession, id: UUID, data: schema.CategoryUpdat
     result = await db.execute(select(Category).where(Category.id == id))
     category = result.scalar_one_or_none()
     if not category:
-        return None
+        raise HTTPException(status_code=404, detail="Category not found")
 
     for key, value in data.dict(exclude_unset=True).items():
         setattr(category, key, value)

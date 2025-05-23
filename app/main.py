@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .api.v1.auth.endpoints import router as auth_router
@@ -7,6 +7,8 @@ from .api.v1.category.endpoints import router as category_router
 from .api.v1.product.endpoints import router as product_router
 from .db.base import Base
 from .db.session import async_engine
+import logging
+from fastapi.responses import JSONResponse
 
 
 @asynccontextmanager
@@ -32,6 +34,15 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all HTTP methods
     allow_headers=["*"],  # Allows all headers
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.error(f"Unhandled error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal Server Error. Please try again later."},
+    )
 
 
 @app.get("/")
