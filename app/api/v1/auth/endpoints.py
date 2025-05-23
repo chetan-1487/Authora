@@ -18,6 +18,7 @@ from ..auth.service import get_google_authorize_url
 from ....utils.utils import save_profile_picture, generate_otp
 from .repository import handle_google_callback
 from pydantic import EmailStr
+from ....core.security import validate_password_strength
 
 router = APIRouter(tags=["User Registration"])
 
@@ -30,6 +31,10 @@ async def register(
     profile_picture: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        validate_password_strength(password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     user = await repository.get_user_by_email(db, email)
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -133,6 +138,10 @@ async def reset_password(
     valid = await repository.verify_otp(db, data.email, data.otp)
     if not valid:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+    try:
+        validate_password_strength(data.new_password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Update password
     hashed = get_password_hash(data.new_password)
