@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from ....db.session import get_db
 from . import schema, repository
-from ....utils.utils import save_product_image
+from ....services.s3_service import save_product_image
 from ..user.service import get_current_user
 from ..user.model import User
 from uuid import UUID
@@ -91,7 +91,7 @@ async def list_products(
     )
 
 
-@router.get("/products/{id}", response_model=schema.ProductOut)
+@router.get("/product/{id}", response_model=schema.ProductOut)
 async def get_product(
     id: UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
 ):
@@ -101,7 +101,7 @@ async def get_product(
     return product
 
 
-@router.post("/products/", response_model=schema.ProductOut)
+@router.post("/product/", response_model=schema.ProductOut)
 async def create_product(
     product_data: schema.ProductCreate = Depends(schema.ProductCreate.as_form),
     image: UploadFile = File(None),
@@ -122,7 +122,7 @@ async def create_product(
     return new_product
 
 
-@router.put("/products/{id}", response_model=schema.ProductOut)
+@router.put("/product/{id}", response_model=schema.ProductOut)
 async def update_product(
     id: UUID,
     product_data: schema.ProductUpdate = Depends(schema.ProductUpdate.as_form),
@@ -137,7 +137,7 @@ async def update_product(
     return product
 
 
-@router.delete("/products/{product_id}")
+@router.delete("/product/{product_id}")
 async def delete_product_with_id(
     product_id: UUID,
     db: AsyncSession = Depends(get_db),

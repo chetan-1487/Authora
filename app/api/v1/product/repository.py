@@ -49,7 +49,7 @@ async def get_product(db: AsyncSession, id: UUID):
 async def create_product(
     db: AsyncSession, data: schema.ProductCreate, image_url: str = None
 ):
-    product = Product(**data.dict(), image_url=image_url, is_ac)
+    product = Product(**data.dict(), image_url=image_url, is_active=True)
     db.add(product)
     await db.commit()
     await db.refresh(product)

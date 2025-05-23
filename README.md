@@ -1,136 +1,198 @@
 
-# FastAPI Project Structure
+# 🛒 Ecommerce FastAPI Backend
 
-This repository represents a FastAPI-based backend application. It is structured with modularity, scalability, and maintainability in mind, following feature-based API design principles.
+A full-featured backend for an ecommerce platform built with FastAPI, PostgreSQL, SQLAlchemy ORM, and Google OAuth 2.0 for authentication. Product images are stored in a simulated S3 environment using LocalStack.
 
-## Project Structure
+---
+
+## 🚀 Features
+
+- FastAPI backend with modular architecture
+- User authentication via Google OAuth 2.0
+- PostgreSQL database using SQLAlchemy ORM
+- JWT-based access/refresh token authentication
+- Product CRUD with image upload to S3 (LocalStack)
+- Role-based access (user/admin)
+- LocalStack for S3-compatible object storage
+- Alembic for database migrations
+- Pydantic for request validation
+
+---
+
+## 🧱 Project Structure
 
 ```
-app/                      # Main application package
-├── main.py               # FastAPI app entrypoint
-├── api/                  # API routing layer (feature-based)
-│   ├── v1/               # API version 1
-│   │   ├── __init__.py
-│   │   ├── user/         # User feature module
-│   │   │   ├── endpoints.py  # API routes
-│   │   │   ├── schema.py     # Pydantic models
-│   │   │   ├── service.py    # Business logic
-│   │   │   ├── repository.py # DB interactions
-│   │   │   └── model.py      # ORM models
-│   │   └── auth/         # Auth feature module
-│   │       ├── endpoints.py  # Auth routes
-│   │       ├── schema.py     # Auth Pydantic models
-│   │       ├── service.py    # Auth business logic
-│   │       ├── repository.py # Auth DB interactions
-│   │       └── model.py      # Auth ORM models
-│   └── __init__.py
-├── core/                 # Application core components
-│   ├── config.py         # App-wide config (Pydantic settings)
-│   ├── security.py       # JWT, password hashing
-│   ├── logging.py        # Logging setup
-│   ├── events.py         # Startup/shutdown handlers
-│   └── db/               # Database core
-│       ├── base.py       # Base class for ORM models
-│       ├── session.py    # DB session management
-│       └── migrations/   # Alembic migrations
-├── services/             # Cross-domain services
-│   ├── email_service.py  # Email service integration
-│   ├── mock_email_service.py  # Mock email service for testing
-│   └── ...              # Other services (SMS, files, etc.)
-└── utils/                # Utility functions
-├── exceptions.py         # Custom exceptions
-├── hashing.py            # Hashing utilities
-└── ...
+.
+├── app/
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── auth
+│   │   │   ├── category
+|   |   |   ├── product
+|   |   |   └── user
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── security.py
+│   ├── models/
+│   │   ├── user.py
+│   │   ├── product.py
+│   ├── schemas/
+│   │   ├── user.py
+│   │   ├── product.py
+│   ├── services/
+│   │   ├── google_auth.py
+│   │   ├── s3_service.py
+|   |   ├── email_service.py
+|   |   └── mock_email_service.py
+│   ├── utils/
+│   │   └── utils.py
+│   ├── db/
+│   │   ├── base.py
+│   │   └── session.py
+│   └── main.py
+├── migrations/
+│   └── env.py
+├── requirements.txt
+├── .env
+└── README.md
 ```
 
-## Installation
+---
 
-To get started, clone the repository and set up a Python virtual environment:
+## 🔑 Authentication
+
+- **Google OAuth 2.0**: Sign in users and generate JWT tokens.
+- **JWT tokens**: Used for protected routes.
+- **User roles**: Supports admin and customer access control.
+
+---
+
+## 🖼️ Product Images (S3 via LocalStack)
+
+- Upload product images to a mock S3 bucket hosted in **LocalStack**.
+- Uses `boto3` SDK to interact with the S3 service.
+- LocalStack provides a local cloud stack for development.
+
+### Setup LocalStack
 
 ```bash
-git clone <repository-url>
-cd <repository-folder>
-python3 -m venv venv
+docker run --rm -it -p 4566:4566 -p 4571:4571 localstack/localstack
+```
+
+### .env for S3
+
+```
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
+S3_BUCKET_NAME=product-images
+S3_ENDPOINT=http://localhost:4566
+```
+
+---
+
+## 🛠️ Setup Instructions
+
+### 1. Clone & Create Environment
+
+```bash
+git clone https://github.com/your-username/authora.git
+cd authora
+python -m venv venv
 source venv/bin/activate
 ```
 
-Install the required dependencies:
+### 2. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Configuration
+### 3. Setup PostgreSQL
 
-The application configuration is handled via Pydantic settings in the `core/config.py` file. Adjust the environment variables for your database, JWT, and other services in this file.
+Make sure PostgreSQL is running and `.env` contains:
 
-### Example:
-
-```python
-class Settings(BaseSettings):
-    DATABASE_URL: str
-    JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str
-    ...
+```
+DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/database
 ```
 
-## Database Setup
-
-Database configurations and session management are handled in `core/db/session.py`. If you are using PostgreSQL or another database, adjust the connection URL and other settings.
-
-To set up the database, run Alembic migrations:
+### 4. Apply Migrations
 
 ```bash
 alembic upgrade head
 ```
 
-## Running the Application
+### 5. Run LocalStack (for S3)
 
-To run the FastAPI application locally, use the following command:
+```bash
+docker run --rm -it -p 4566:4566 -p 4571:4571 localstack/localstack
+```
+
+### 6. Run the App
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-This will start the development server at `http://127.0.0.1:8000`.
+---
 
-## API Documentation
+## 🔐 Google OAuth Setup
 
-Once the application is running, you can access the auto-generated API documentation at:
+Register an app in [Google Cloud Console](https://console.cloud.google.com/):
 
-- [Swagger UI](http://127.0.0.1:8000/docs)
-- [ReDoc](http://127.0.0.1:8000/redoc)
-
-## Features
-
-### Authentication & User Management
-- User sign-up and login.
-- JWT-based authentication.
-- Google OAuth 2.0 authentication.
-
-### Database & Models
-- PostgreSQL database with SQLAlchemy ORM models.
-- Pydantic models for data validation and serialization.
-- Alembic migrations for database schema versioning.
-
-### Services
-- Email service for notifications (mock and real implementations).
-
-### Utils
-- Custom utility functions for hashing, exception handling, etc.
-
-## Tests
-
-Run the tests with:
-
-```bash
-pytest
+```
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+REDIRECT_URI=http://localhost:8000/api/v1/auth/google/callback
 ```
 
-## Contributing
+---
 
-We welcome contributions! Please feel free to open an issue or submit a pull request.
+## 🔄 API Endpoints
 
-## License
+### Auth
+- `POST /auth/register` — Register User
+- `POST /auth/verify-email` — User verify email
+- `POST /auth/login` — User login
+- `POST /auth/verify-resend-otp` — User Send OTP again for verification
+- `POST /auth/forgot-password` — User Forget email Password
+- `PUT /auth/reset-password` — User set new password
+- `POST /auth/logout` — User Logout
+- `GET /api/v1/auth/google/login` — Google Login Redirect
+- `GET /api/v1/auth/google/callback` — Google Auth Callback
 
-This project is licensed under the MIT License.
+### User
+
+- `GET /user/info` — User detail
+- `PATCH /product/{id}` — Update user detail
+- `DELETE /product/{id}` — Delete user by ID
+
+### Category
+- `GET /categories` — List categories
+- `GET /categories/{id}` — Get category by unique ID.
+- `POST /categories` — Create new category
+- `PUT /categories/{id}` — Update specific category by its unique ID.
+- `DELETE /categories/{id}` — Delete specific category by its unique ID.
+
+### Products
+
+- `GET /products/` — List products
+- `GET /product/{id}` — Get product by id
+- `POST /product` — Create new product
+- `PUT /product/{id}` — Update product detail
+- `DELETE /product/{id}` — Delete product by ID
+
+---
+
+## 📂 Upload Product Image Example
+
+```bash
+curl -X POST http://localhost:8000/api/v1/product/upload-image \
+  -H "Authorization: Bearer <your-jwt-token>" \
+  -F "file=@image.png"
+```
+
+---
+
+## 📄 License
+
+MIT
