@@ -3,16 +3,17 @@ import boto3
 import uuid
 from botocore.client import Config
 import asyncio
+from ..core.config import settings
 
-LOCALSTACK_ENDPOINT = "http://localhost:4566"
+LOCALSTACK_ENDPOINT = settings.LOCALSTACK_ENDPOINT
 BUCKET_NAME = "product-images"
-REGION = "us-east-1"
+REGION = settings.REGION
 
 s3 = boto3.client(
     "s3",
     endpoint_url=LOCALSTACK_ENDPOINT,
-    aws_access_key_id="test",
-    aws_secret_access_key="test",
+    aws_access_key_id=settings.aws_access_key_id,
+    aws_secret_access_key=settings.aws_secret_access_key,
     region_name=REGION,
     config=Config(signature_version="s3v4"),
 )

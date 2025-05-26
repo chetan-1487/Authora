@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
     DATABASE_CONNECTION: str
+    IS_DEVELOPMENT: str = False
+
+    REGION: str
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    LOCALSTACK_ENDPOINT: str = "http://localhost:4566"
+
 
     class Config:
         env_file = ".env"

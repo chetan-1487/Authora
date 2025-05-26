@@ -1,7 +1,20 @@
 
 # 🛒 Ecommerce FastAPI Backend
 
-A full-featured backend for an ecommerce platform built with FastAPI, PostgreSQL, SQLAlchemy ORM, and Google OAuth 2.0 for authentication. Product images are stored in a simulated S3 environment using LocalStack.
+A full-featured backend for an ecommerce platform built with FastAPI, PostgreSQL, SQLAlchemy ORM, and Google OAuth 2.0 for authentication. Product images are stored in a S3 Bucket.
+
+---
+
+## 🎯 Objectives
+
+- Build a modern, secure, and scalable ecommerce backend using FastAPI.
+- Implement Google OAuth 2.0 for user authentication and onboarding.
+- Use JWT-based access/refresh tokens for secure session management.
+- Support full CRUD operations for products and categories.
+- Store and retrieve product images via S3-compatible storage.
+- Manage relational data with PostgreSQL using SQLAlchemy ORM.
+- Provide a modular and maintainable code structure.
+- Enable seamless integration with frontend or mobile applications via RESTful APIs.
 
 ---
 
@@ -11,9 +24,8 @@ A full-featured backend for an ecommerce platform built with FastAPI, PostgreSQL
 - User authentication via Google OAuth 2.0
 - PostgreSQL database using SQLAlchemy ORM
 - JWT-based access/refresh token authentication
-- Product CRUD with image upload to S3 (LocalStack)
+- Product CRUD with image upload to S3
 - Role-based access (user/admin)
-- LocalStack for S3-compatible object storage
 - Alembic for database migrations
 - Pydantic for request validation
 
@@ -102,12 +114,15 @@ S3_ENDPOINT=http://localhost:4566
 
 ---
 
-## 🛠️ Setup Instructions
-
 ### Prerequisites
 - Python 3.9 or later
 - PostgreSQL database for storing user, category and product details
 - A virtual environment is recommended.
+- LocalStack for S3-compatible object storage
+
+---
+
+## 🛠️ Developer Instructions
 
 ### 1. Clone & Create Environment
 
@@ -137,11 +152,23 @@ DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/database
 ```bash
 alembic upgrade head
 ```
+### 5. Install and Start LocalStack for Local Simulation
 
-### 5. Run LocalStack (for S3)
+LocalStack simulates AWS services (S3) locally. Install it using pip:
+```bash
+pip install localstack
+```
 
+Start LocalStack using docker:
 ```bash
 docker run --rm -it -p 4566:4566 -p 4571:4571 localstack/localstack
+```
+
+---
+
+Verify LocalStack is running:
+```bash
+localstack status services
 ```
 
 ### 6. Run the App
@@ -207,9 +234,4 @@ curl -X POST http://localhost:8000/api/v1/product/upload-image \
   -H "Authorization: Bearer <your-jwt-token>" \
   -F "file=@image.png"
 ```
-
 ---
-
-## 📄 License
-
-MIT
