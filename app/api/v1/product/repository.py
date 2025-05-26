@@ -51,7 +51,7 @@ async def get_product(db: AsyncSession, id: UUID):
 async def create_product(
     db: AsyncSession, data: schema.ProductCreate, image_url: str = None
 ):
-    product = Product(**data.dict(), image_url=image_url, is_active=True)
+    product = Product(**data.model_dump(), image_url=image_url, is_active=True)
     db.add(product)
     await db.commit()
     await db.refresh(product)
@@ -68,7 +68,7 @@ async def update_product(
     if not product or not product.is_active:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    for key, value in data.dict(exclude_unset=True).items():
+    for key, value in data.model_dump(exclude_unset=True).items():
         setattr(product, key, value)
 
     if image_url:

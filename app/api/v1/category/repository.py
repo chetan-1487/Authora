@@ -29,7 +29,7 @@ async def create_category(db: AsyncSession, data: schema.CategoryCreate):
             detail="Category with this name already exists.",
         )
     # Create and insert new category
-    category = Category(**data.dict())
+    category = Category(**data.model_dump())
     db.add(category)
     await db.commit()
     await db.refresh(category)
@@ -42,7 +42,7 @@ async def update_category(db: AsyncSession, id: UUID, data: schema.CategoryUpdat
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
 
-    for key, value in data.dict(exclude_unset=True).items():
+    for key, value in data.model_dump(exclude_unset=True).items():
         setattr(category, key, value)
 
     await db.commit()

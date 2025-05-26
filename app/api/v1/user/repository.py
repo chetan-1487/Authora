@@ -44,7 +44,7 @@ async def get_user_by_id(db: AsyncSession, user_id: int):
 
 
 async def update_user_in_db(user: User, data: UpdateUserRequest, db: AsyncSession):
-    for key, value in data.dict(exclude_unset=True).items():
+    for key, value in data.model_dump(exclude_unset=True).items():
         setattr(user, key, value)
 
     db.add(user)
