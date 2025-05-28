@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     DATABASE_CONNECTION: str
     IS_DEVELOPMENT: bool = IS_DEVELOPMENT
 
+    MAX_FILE_SIZE_MB: int = 5
     REGION: str
     aws_access_key_id: str
     aws_secret_access_key: str

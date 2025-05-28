@@ -14,6 +14,8 @@ LOCALSTACK_ENDPOINT = settings.LOCALSTACK_ENDPOINT
 PRODUCT_BUCKET = "product-images"
 PROFILE_BUCKET = "profile-info"
 
+SIZE_OF_IMAGE = settings.MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+
 # Initialize S3 client (reversed logic per your request)
 if not IS_DEVELOPMENT:
     # Use LocalStack when IS_DEVELOPMENT is False
@@ -53,6 +55,8 @@ async def save_file_to_s3(file: UploadFile, bucket_name: str) -> str:
 
     key = f"{uuid.uuid4()}_{file.filename}"
     content = await file.read()
+    if len(content) > SIZE_OF_IMAGE:
+        raise ValueError("File size exceeds limit")
 
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(

@@ -9,9 +9,7 @@ from ....core.config import settings
 from fastapi.responses import JSONResponse
 from ..user.model import User
 from ....services.s3_service import save_profile_info
-import aiohttp
-from fastapi import UploadFile
-from io import BytesIO
+from ....utils.utils import download_image_as_upload_file
 
 
 async def get_user_by_email(db: AsyncSession, email: str):
@@ -77,49 +75,47 @@ async def get_or_create_user_from_google(user_info: dict, db: AsyncSession) -> U
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
 
-    async def fetch_and_upload_profile_picture(picture_url: str):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(picture_url) as response:
-                if response.status == 200:
-                    content = await response.read()
-                    filename = "google_profile.jpg"  # arbitrary name
-                    file = UploadFile(
-                        filename=filename,
-                        file=BytesIO(content),
-                        content_type="image/jpeg",
-                    )
-                    return await save_profile_info(file)
-                return None
-
     if not user:
-        # Create new user
-        uploaded_url = await fetch_and_upload_profile_picture(user_info.get("picture"))
+        # Create a new user
         user = User(
             email=email,
             name=user_info.get("name"),
-            profile_picture=uploaded_url,
+            profile_picture=user_info.get("picture"),
             is_verified=True,
             auth_provider="google",
-            hashed_password=get_password_hash("Hello@123"),
+            hashed_password=get_password_hash("Hello@123"),  # Random secure password
         )
+        profile_pic_url = user_info.get("picture")
+        if profile_pic_url:
+            dummy_upload_file = await download_image_as_upload_file(profile_pic_url)
+
+        await save_profile_info(dummy_upload_file)  # Optional: store picture
         db.add(user)
         await db.commit()
         await db.refresh(user)
     else:
-        # Existing user, update fields
-        user.name = user_info.get("name", user.name)
+        # Update existing user only if needed
+        updated = False
 
-        new_picture_url = user_info.get("picture")
-        if new_picture_url and new_picture_url != user.profile_picture:
-            uploaded_url = await fetch_and_upload_profile_picture(new_picture_url)
-            if uploaded_url:
-                user.profile_picture = uploaded_url
+        if user.name != user_info.get("name", user.name):
+            user.name = user_info["name"]
+            updated = True
 
-        user.is_verified = True
-        user.auth_provider = "google"
+        if user.profile_picture != user_info.get("picture", user.profile_picture):
+            user.profile_picture = user_info["picture"]
+            updated = True
 
-        await db.commit()
-        await db.refresh(user)
+        if user.auth_provider != "google":
+            user.auth_provider = "google"
+            updated = True
+
+        if not user.is_verified:
+            user.is_verified = True
+            updated = True
+
+        if updated:
+            await db.commit()
+            await db.refresh(user)
 
     return user
 

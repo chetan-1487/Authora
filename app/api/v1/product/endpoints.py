@@ -126,11 +126,14 @@ async def create_product(
 async def update_product(
     id: UUID,
     product_data: schema.ProductUpdate = Depends(schema.ProductUpdate.as_form),
-    image: UploadFile = File(None),
+    image: Optional[UploadFile] = File(None),  # Optional
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    image_url = await save_product_image(image) if image else None
+    image_url = None
+    if image and image.filename:  # Only upload if a real file is given
+        image_url = await save_product_image(image)
+
     product = await repository.update_product(db, id, product_data, image_url)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
