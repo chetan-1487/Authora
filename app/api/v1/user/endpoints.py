@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Form, File, UploadFile
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import repository, schema
 from .service import get_db, get_current_user
@@ -13,11 +14,14 @@ async def get_user_info(current_user=Depends(get_current_user)):
 
 @router.patch("/user/update", response_model=schema.UserResponse)
 async def update_user_info(
-    data: schema.UpdateUserRequest,
+    name: Optional[str] = Form(None),
+    profile_picture: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    updated_user = await repository.update_user(db, current_user.id, data)
+    updated_user = await repository.update_user(
+        db, current_user.id, name, profile_picture
+    )
     return updated_user
 
 

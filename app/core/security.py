@@ -31,9 +31,9 @@ def decode_token(token: str):
         )
     except JWTError:
         return None
-    
 
-def validate_password_strength(cls, password: str):
+
+def validate_password_strength(password: str):
     if len(password) < 8:
         raise ValueError("Password must be at least 8 characters long")
     if not re.search(r"[A-Z]", password):

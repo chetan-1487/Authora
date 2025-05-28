@@ -1,7 +1,10 @@
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
+import os
 
 load_dotenv(override=True)
+
+IS_DEVELOPMENT = os.getenv("IS_DEVELOPMENT", "false").lower() == "true"
 
 
 class Settings(BaseSettings):
@@ -13,13 +16,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
     DATABASE_CONNECTION: str
-    IS_DEVELOPMENT: str = False
+    IS_DEVELOPMENT: bool = IS_DEVELOPMENT
 
     REGION: str
     aws_access_key_id: str
     aws_secret_access_key: str
     LOCALSTACK_ENDPOINT: str = "http://localhost:4566"
-
 
     class Config:
         env_file = ".env"

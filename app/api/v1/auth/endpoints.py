@@ -15,10 +15,11 @@ from ....db.session import get_db
 from ....services.mock_email_service import send_otp_email
 from fastapi.responses import JSONResponse, RedirectResponse
 from .service import get_google_authorize_url
-from ....utils.utils import save_profile_picture, generate_otp
+from ....utils.utils import generate_otp
 from .repository import handle_google_callback
 from pydantic import EmailStr
 from ....core.security import validate_password_strength
+from ....services.s3_service import save_profile_info
 
 router = APIRouter(tags=["User Registration"])
 
@@ -40,7 +41,7 @@ async def register(
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = get_password_hash(password)
-    profile_picture_name = await save_profile_picture(profile_picture)
+    profile_picture_name = await save_profile_info(profile_picture)
 
     # Pass saved image path (not file object) to DB
     await repository.create_user(db, name, email, hashed_password, profile_picture_name)

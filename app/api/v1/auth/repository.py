@@ -4,11 +4,14 @@ from .model import OTP
 from sqlalchemy.future import select
 from datetime import datetime, timedelta
 from ....core.security import get_password_hash, create_access_token
-from ....utils.utils import save_profile_picture_from_url
 import httpx
 from ....core.config import settings
 from fastapi.responses import JSONResponse
 from ..user.model import User
+from ....services.s3_service import save_profile_info
+import aiohttp
+from fastapi import UploadFile
+from io import BytesIO
 
 
 async def get_user_by_email(db: AsyncSession, email: str):
@@ -74,34 +77,47 @@ async def get_or_create_user_from_google(user_info: dict, db: AsyncSession) -> U
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
 
+    async def fetch_and_upload_profile_picture(picture_url: str):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(picture_url) as response:
+                if response.status == 200:
+                    content = await response.read()
+                    filename = "google_profile.jpg"  # arbitrary name
+                    file = UploadFile(
+                        filename=filename,
+                        file=BytesIO(content),
+                        content_type="image/jpeg",
+                    )
+                    return await save_profile_info(file)
+                return None
+
     if not user:
-        # User doesn't exist, create a new user
+        # Create new user
+        uploaded_url = await fetch_and_upload_profile_picture(user_info.get("picture"))
         user = User(
             email=email,
             name=user_info.get("name"),
-            profile_picture=user_info.get("picture"),
+            profile_picture=uploaded_url,
             is_verified=True,
             auth_provider="google",
-            hashed_password=get_password_hash(
-                "Hello@123"
-            ),  # or generate a secure password if needed
+            hashed_password=get_password_hash("Hello@123"),
         )
-        await save_profile_picture_from_url(
-            user_info.get("picture")
-        )  # Save profile picture if needed
         db.add(user)
         await db.commit()
         await db.refresh(user)
     else:
-        # User exists, update the user's information if changed
-        user.name = user_info.get("name", user.name)  # Update name if provided
-        user.profile_picture = user_info.get(
-            "picture", user.profile_picture
-        )  # Update profile picture if provided
-        user.is_verified = True  # You can also update verification status if needed
-        user.auth_provider = "google"  # Ensure the auth provider is set as 'google'
+        # Existing user, update fields
+        user.name = user_info.get("name", user.name)
 
-        # Commit changes if any information was updated
+        new_picture_url = user_info.get("picture")
+        if new_picture_url and new_picture_url != user.profile_picture:
+            uploaded_url = await fetch_and_upload_profile_picture(new_picture_url)
+            if uploaded_url:
+                user.profile_picture = uploaded_url
+
+        user.is_verified = True
+        user.auth_provider = "google"
+
         await db.commit()
         await db.refresh(user)
 

@@ -1,29 +1,30 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from .model import User
-from . import schema
+from typing import Optional
+from fastapi import UploadFile
 from .schema import UpdateUserRequest
-from ....utils.utils import save_profile_picture
+from ....services.s3_service import save_profile_info
 
 
-async def update_user(db: AsyncSession, user_id: int, data: schema.UpdateUserRequest):
+async def update_user(
+    db: AsyncSession,
+    user_id: int,
+    name: Optional[str],
+    profile_picture: Optional[UploadFile],
+):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
         return None
 
-    # Update name if provided
-    if data.name:
-        user.name = data.name
+    if name:
+        user.name = name
 
-    # Handle profile picture update
-    if data.profile_picture:
-        profile_picture_name = save_profile_picture(
-            data.profile_picture,
-            existing_filename=user.profile_picture if user.profile_picture else None,
-        )
-        user.profile_picture = profile_picture_name
+    if profile_picture:
+        profile_picture_url = await save_profile_info(profile_picture)
+        user.profile_picture = profile_picture_url
 
     await db.commit()
     await db.refresh(user)
