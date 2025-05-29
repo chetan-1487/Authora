@@ -106,7 +106,6 @@ async def resend_otp(email: str, db: AsyncSession = Depends(get_db)):
     await repository.update_otp(db, email, otp)
 
     await send_otp_email(email, otp)
-    print(otp)
 
     return {"msg": "OTP sent successfully"}
 

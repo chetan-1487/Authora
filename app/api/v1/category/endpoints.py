@@ -16,7 +16,7 @@ async def list_categories(
     return await repository.get_all_categories(db)
 
 
-@router.get("/category/{id}", response_model=schema.CategoryOut)
+@router.get("/category/{category_id}", response_model=schema.CategoryOut)
 async def get_category(
     id: UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
 ):
@@ -36,7 +36,7 @@ async def create_category(
     return new_category
 
 
-@router.put("/category/{id}", response_model=schema.CategoryOut)
+@router.put("/category/{category_id}", response_model=schema.CategoryOut)
 async def update_category(
     id: UUID,
     data: schema.CategoryUpdate,
@@ -49,7 +49,7 @@ async def update_category(
     return category
 
 
-@router.delete("/category/{id}")
+@router.delete("/category/{category_id}")
 async def delete_category(
     id: UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
 ):

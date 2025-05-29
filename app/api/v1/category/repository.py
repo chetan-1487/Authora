@@ -8,12 +8,14 @@ from uuid import UUID
 
 
 async def get_all_categories(db: AsyncSession):
-    result = await db.execute(select(Category))
+    result = await db.execute(select(Category).where(Category.is_active))
     return result.scalars().all()
 
 
 async def get_category(db: AsyncSession, id: UUID):
-    result = await db.execute(select(Category).where(Category.id == id))
+    result = await db.execute(
+        select(Category).where(Category.id == id and Category.is_active)
+    )
     if not result:
         raise HTTPException(status_code=404, detail="Invalid product ID")
     return result.scalar_one_or_none()
@@ -37,7 +39,9 @@ async def create_category(db: AsyncSession, data: schema.CategoryCreate):
 
 
 async def update_category(db: AsyncSession, id: UUID, data: schema.CategoryUpdate):
-    result = await db.execute(select(Category).where(Category.id == id))
+    result = await db.execute(
+        select(Category).where(Category.id == id) and Category.is_active
+    )
     category = result.scalar_one_or_none()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -62,10 +66,11 @@ async def delete_category(db: AsyncSession, id: UUID):
     # Step 2: Retrieve the category
     result = await db.execute(select(Category).where(Category.id == id))
     category = result.scalar_one_or_none()
-    if not category:
-        return False
+    if not category or not category.is_active:
+        raise HTTPException(status_code=404, detail="Category not found")
 
     # Step 3: Delete and commit
-    await db.delete(category)
+    category.is_active = False
+    # await db.delete(category)
     await db.commit()
     return True

@@ -91,7 +91,7 @@ async def list_products(
     )
 
 
-@router.get("/product/{id}", response_model=schema.ProductOut)
+@router.get("/product/{product_id}", response_model=schema.ProductOut)
 async def get_product(
     id: UUID, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
 ):
@@ -122,7 +122,7 @@ async def create_product(
     return new_product
 
 
-@router.put("/product/{id}", response_model=schema.ProductOut)
+@router.put("/product/{product_id}", response_model=schema.ProductOut)
 async def update_product(
     id: UUID,
     product_data: schema.ProductUpdate = Depends(schema.ProductUpdate.as_form),
