@@ -76,7 +76,6 @@ async def verify_email(
 
 @router.post("/auth/login", response_model=schema.TokenResponse)
 async def login(
-    request: Request,
     data: schema.LoginRequest,
     db: AsyncSession = Depends(get_db),
     access_token: str = Cookie(default=None),
