@@ -7,10 +7,17 @@ from fastapi import (
     File,
     Form,
     Response,
+    Cookie,
 )
+from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import schema, repository
-from ....core.security import verify_password, create_access_token, get_password_hash
+from ....core.security import (
+    verify_password,
+    create_access_token,
+    get_password_hash,
+    decode_token,
+)
 from ....db.session import get_db
 from ....services.mock_email_service import send_otp_email
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -68,7 +75,21 @@ async def verify_email(
 
 
 @router.post("/auth/login", response_model=schema.TokenResponse)
-async def login(data: schema.LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: Request,
+    data: schema.LoginRequest,
+    db: AsyncSession = Depends(get_db),
+    access_token: str = Cookie(default=None),
+):
+
+    if access_token:
+        try:
+            payload = decode_token(access_token)
+            if payload.get("user_id"):
+                raise HTTPException(status_code=400, detail="User already logged in")
+        except JWTError:
+            pass
+
     user = await repository.get_user_by_email(db, data.email)
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
